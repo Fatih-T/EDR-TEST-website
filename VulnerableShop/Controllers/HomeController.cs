@@ -23,7 +23,7 @@ namespace VulnerableShop.Controllers
             var products = new List<Product>();
             using (var conn = new SqlConnection(_connectionString))
             {
-                // ZAFİYET: SQL Injection (Ham string birleştirme)
+                // ZAFİYET: SQL Injection (Ham string birleştirme ve çoklu komut desteği)
                 string sql = "SELECT * FROM Products";
                 if (!string.IsNullOrEmpty(query))
                 {
@@ -60,33 +60,40 @@ namespace VulnerableShop.Controllers
             var product = new Product();
             using (var conn = new SqlConnection(_connectionString))
             {
-                string sql = "SELECT * FROM Products WHERE ProductId = " + id;
-                var cmd = new SqlCommand(sql, conn);
                 conn.Open();
-                using (var reader = cmd.ExecuteReader())
+
+                // 1. Ürün Bilgilerini Getir
+                string sql = "SELECT * FROM Products WHERE ProductId = " + id;
+                using (var cmd = new SqlCommand(sql, conn))
                 {
-                    if (reader.Read())
+                    using (var reader = cmd.ExecuteReader())
                     {
-                        product.ProductId = (int)reader["ProductId"];
-                        product.ProductName = reader["ProductName"].ToString();
-                        product.Description = reader["Description"].ToString();
-                        product.Price = (decimal)reader["Price"];
+                        if (reader.Read())
+                        {
+                            product.ProductId = (int)reader["ProductId"];
+                            product.ProductName = reader["ProductName"].ToString();
+                            product.Description = reader["Description"].ToString();
+                            product.Price = (decimal)reader["Price"];
+                        }
                     }
                 }
 
-                // Yorumları Listele (Stored XSS Tetikleme)
+                // 2. Yorumları Getir (Stored XSS Tetikleme)
+                // Connection string üzerinde MultipleActiveResultSets=True eklendiği için sorun çıkmaz.
                 string commentSql = "SELECT * FROM Comments WHERE ProductId = " + id;
-                var commentCmd = new SqlCommand(commentSql, conn);
-                using (var reader = commentCmd.ExecuteReader())
+                using (var commentCmd = new SqlCommand(commentSql, conn))
                 {
-                    while (reader.Read())
+                    using (var reader = commentCmd.ExecuteReader())
                     {
-                        product.Comments.Add(new Comment
+                        while (reader.Read())
                         {
-                            UserNickname = reader["UserNickname"].ToString(),
-                            CommentText = reader["CommentText"].ToString(),
-                            CreatedAt = (DateTime)reader["CreatedAt"]
-                        });
+                            product.Comments.Add(new Comment
+                            {
+                                UserNickname = reader["UserNickname"].ToString(),
+                                CommentText = reader["CommentText"].ToString(),
+                                CreatedAt = (DateTime)reader["CreatedAt"]
+                            });
+                        }
                     }
                 }
             }
