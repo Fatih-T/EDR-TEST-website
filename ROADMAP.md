@@ -1,39 +1,49 @@
-# .NET Siber Güvenlik Laboratuvarı - Kurulum ve Test Rehberi
+# .NET Siber Güvenlik Laboratuvarı - Yerel Laboratuvar Kurulum Rehberi
 
-Bu proje, Carbon Black ve diğer EDR çözümlerinin `w3wp.exe` (IIS Worker Process) üzerindeki davranışlarını analiz etmek için tasarlanmış zafiyetli bir .NET 8.0 MVC uygulamasıdır.
+Bu proje, Carbon Black ve diğer EDR çözümlerinin Windows IIS üzerindeki `w3wp.exe` (Worker Process) davranışlarını analiz etmek için tasarlanmıştır.
 
-## 1. Veritabanı Kurulumu (MSSQL)
-1. MSSQL Server Management Studio (SSMS) açın.
-2. `init_db.sql` dosyasındaki sorguları çalıştırarak `ECommerceDB` veritabanını ve tabloları oluşturun.
-3. `VulnerableShop/appsettings.json` dosyasındaki `ConnectionStrings` bölümünü kendi MSSQL bilgilerinizle güncelleyin.
+## 1. Mimari Yapı (Senaryo)
+- **Sunucu A (Web Sunucusu):** IIS kurulu, Windows Server (veya Win 10/11), Carbon Black Agent yüklü.
+- **Sunucu B (Veritabanı Sunucusu):** MSSQL Server yüklü.
 
-## 2. IIS Üzerinde Yayına Alma
-1. Projeyi `dotnet publish -c Release -o ./publish` komutuyla derleyin.
-2. IIS Manager'ı açın.
-3. Yeni bir Web Sitesi oluşturun ve Physical Path olarak `publish` klasörünü gösterin.
-4. Application Pool ayarlarında .NET CLR Version olarak "No Managed Code" seçili olduğundan emin olun (ASP.NET Core için).
-5. Yazma yetkisi: `wwwroot/uploads` klasörüne IIS AppPool\<SiteAdi> kullanıcısı için yazma yetkisi verin.
+## 2. Veritabanı Sunucusu (Sunucu B) Hazırlığı
+1. MSSQL Server'da "SQL Server Authentication" (SQL Kullanıcı Kimlik Doğrulaması) özelliğinin açık olduğunu teyit edin.
+2. `init_db.sql` scriptini çalıştırarak `ECommerceDB` veritabanını ve tablolarını oluşturun.
+3. SQL Server Configuration Manager üzerinden **TCP/IP** protokolünü etkinleştirin ve varsayılan 1433 portunun dışarıdan erişilebilir olduğundan emin olun.
+4. Windows Firewall üzerinden 1433 portuna izin verin.
 
-## 3. Test Senaryoları & Carbon Black Analizi
+## 3. Web Sunucusu (Sunucu A) Hazırlığı & IIS Kurulumu
+1. **Kodun Derlenmesi:**
+   ```powershell
+   dotnet publish -c Release -o C:\inetpub\vulnerableshop
+   ```
+2. **IIS Yapılandırması:**
+   - Yeni bir Web Sitesi oluşturun. (Port: 80 veya 8080)
+   - Uygulama Havuzu (AppPool) ayarlarında **.NET CLR Version: No Managed Code** seçin.
+   - **Identity:** Application Pool Identity olarak bırakabilirsiniz ancak veritabanına erişim yetkisi olduğundan emin olun.
+3. **Yazma Yetkisi:** `wwwroot\uploads` klasörüne sağ tıklayıp Güvenlik sekmesinden `IIS AppPool\<SiteAdi>` kullanıcısına **Yazma** yetkisi verin.
+4. **Connection String:** `appsettings.json` içindeki sunucu adresini Sunucu B'nin IP adresiyle güncelleyin.
 
-### Senaryo A: Command Injection (Child Process Analizi)
-- **URL:** `/Home/Ping`
-- **Saldırı:** `8.8.8.8 & whoami` veya `8.8.8.8 & powershell -c "Invoke-WebRequest ..."`
-- **EDR Gözlemi:** `w3wp.exe`'nin altında `cmd.exe` veya `powershell.exe` süreçlerinin oluştuğunu görmelisiniz. Carbon Black bunu "Suspicious Child Process" olarak işaretleyecektir.
+## 4. Carbon Black Analiz Senaryoları
 
-### Senaryo B: SQL Injection
-- **URL:** `/Home/Index?query='`
-- **Saldırı:** `' UNION SELECT * FROM Users--`
-- **EDR Gözlemi:** Uygulamanın veritabanı ile ham SQL üzerinden konuşması ve sonucunda sızan veriler.
+### Senaryo 1: Command Injection (RCE)
+- **Modül:** `/Home/Ping`
+- **Girdi:** `127.0.0.1 & whoami`
+- **Analiz:** Carbon Black panelinde `w3wp.exe` sürecinin altında bir child process olarak `cmd.exe` ve `whoami.exe`'nin oluştuğunu görmelisiniz. Bu, "Unusual Child Process" veya "Suspicious Command Execution" olarak alarm üretmelidir.
 
-### Senaryo C: Insecure File Upload
-- **URL:** `/Home/UploadProductImage`
-- **Saldırı:** `.aspx` veya `.exe` uzantılı bir dosya yüklemeyi deneyin.
-- **EDR Gözlemi:** Dosya sisteme yazıldığında "File Write" eventlerini ve eğer çalıştırılırsa `w3wp.exe` tarafından tetiklenen yürütülebilir dosyaları takip edin.
+### Senaryo 2: Insecure File Upload
+- **Modül:** `/Home/UploadProductImage`
+- **Girdi:** Bir .exe veya .aspx dosyası yükleyin.
+- **Analiz:** Dosya sisteme yazıldığında EDR'ın "File Write" event'ini nasıl yakaladığını görün. Eğer yüklediğiniz dosyayı IIS üzerinden tetiklerseniz, w3wp.exe'nin bu dosyayı çalıştırma girişimini izleyin.
 
-### Senaryo D: Path Traversal
-- **URL:** `/Home/Download?fileName=../../appsettings.json`
-- **Gözlem:** Hassas yapılandırma dosyalarına erişim.
+### Senaryo 3: SQL Injection
+- **Modül:** `/Home/Index` (Arama Kutusu)
+- **Girdi:** `' OR 1=1--`
+- **Analiz:** Uygulamanın MSSQL sunucusuyla kurduğu bağlantıda geçen ham SQL sorgularını ve sızan verileri izleyin.
 
-## 4. Carbon Black İçin İpucu
-`w3wp.exe` genellikle sadece ağ trafiği oluşturması beklenen bir süreçtir. Eğer bu sürecin `cmd.exe`, `net.exe`, `whoami.exe` gibi araçları çalıştırdığını görüyorsanız, bu doğrudan bir "Post-Exploitation" belirtisidir.
+## 5. İpucu: w3wp.exe Davranış Kuralları
+Normalde bir web servisi sadece gelen HTTP isteklerini cevaplar. Eğer bu servis:
+- Bir shell (`cmd`, `powershell`) başlatıyorsa,
+- Sistem araçlarını (`net`, `tasklist`, `whoami`) çalıştırıyorsa,
+- Yerel diskte yürütülebilir dosyalar oluşturuyorsa,
+Bu durum doğrudan bir güvenlik ihlali (Exploitation) belirtisidir ve Carbon Black üzerinde bu davranışlar en yüksek öncelikle takip edilmelidir.
