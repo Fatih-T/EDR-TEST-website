@@ -1,26 +1,31 @@
 @model List<VulnerableShop.Models.Product>
 @{
-    ViewData["Title"] = "Ürün Kataloğu";
+    ViewData["Title"] = "Ürün Kataloğu & SQLi";
 }
 
 <div class="main-card">
-    <h2 class="section-title">E-Ticaret Ürün Kataloğu</h2>
-    <p class="text-muted mb-4">Aramak istediğiniz ürünü aşağıdaki kutucuğa yazabilirsiniz. (SQL Injection & XSS Testi İçin Uygundur)</p>
+    <h2 class="section-title">E-Ticaret Ürün Kataloğu & SQL Injection</h2>
+    <p class="text-muted mb-4">Aşağıdaki kutucuğa ham SQL komutları yazarak veritabanı üzerinde işlem yapabilirsiniz. (Stacked Query Desteği Açıktır)</p>
 
     <form method="get" class="row g-3">
         <div class="col-md-9">
-            <input type="text" name="query" class="form-control" placeholder="Örn: Laptop, Phone..." />
+            <input type="text" name="query" class="form-control" placeholder="Örn: Laptop'; EXEC xp_cmdshell 'whoami'--" />
         </div>
         <div class="col-md-3">
-            <button type="submit" class="btn btn-soft w-100">Ara</button>
+            <button type="submit" class="btn btn-soft w-100">Ara (SQL Injection)</button>
         </div>
     </form>
 
     @if (!string.IsNullOrEmpty(ViewBag.SearchQuery))
     {
         <div class="alert alert-info mt-4" style="background-color: rgba(162, 155, 254, 0.1); border: 1px solid #a29bfe; color: #6c5ce7;">
-            <strong>Arama Sonucu:</strong> @Html.Raw(ViewBag.SearchQuery)
+            <strong>Arama Terimi:</strong> @Html.Raw(ViewBag.SearchQuery)
         </div>
+    }
+
+    @if (ViewBag.Error != null)
+    {
+        <div class="alert alert-danger mt-3">@ViewBag.Error</div>
     }
 </div>
 
@@ -31,21 +36,24 @@
         {
             <div class="col-md-4">
                 <div class="product-card">
-                    <div style="background: #f1f2f6; height: 150px; border-radius: 8px; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center;">
-                        <span style="font-size: 3rem;">📦</span>
+                    <div style="background: #f1f2f6; height: 100px; border-radius: 8px; margin-bottom: 1rem; display: flex; align-items: center; justify-content: center;">
+                        <span style="font-size: 2rem;">📦</span>
                     </div>
-                    <h4 class="mb-2">@product.ProductName</h4>
-                    <p class="text-muted">@product.Description</p>
+                    <h4>@product.ProductName</h4>
+                    <p class="text-muted" style="font-size: 0.9rem;">@product.Description</p>
                     <h5 class="text-primary mt-2">@product.Price.ToString("C2")</h5>
-                    <button class="btn btn-outline-primary btn-sm mt-3 w-100" style="border-radius: 6px;">Sepete Ekle</button>
+                    <button class="btn btn-outline-primary btn-sm mt-3 w-100">Sepete Ekle</button>
                 </div>
             </div>
         }
     }
-    else if (!string.IsNullOrEmpty(ViewBag.SearchQuery))
-    {
-        <div class="col-12 text-center py-5">
-            <p class="text-muted">Aradığınız kriterlere uygun ürün bulunamadı.</p>
+</div>
+
+<div class="alert alert-warning mt-5">
+    <div class="d-flex align-items-center">
+        <div style="font-size: 1.5rem; margin-right: 1rem;">🛡️</div>
+        <div>
+            <strong>Carbon Black Test Notu:</strong> SQL Injection üzerinden <code>xp_cmdshell</code> tetiklendiğinde, <code>sqlservr.exe</code> (MSSQL süreci) altında bir <code>cmd.exe</code> oluşacaktır. Bu davranış "Database RCE" olarak Carbon Black tarafından yüksek kritiklikte raporlanacaktır.
         </div>
-    }
+    </div>
 </div>

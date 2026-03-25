@@ -1,49 +1,26 @@
-# .NET Siber Güvenlik Laboratuvarı - Yerel Laboratuvar Kurulum Rehberi
+# .NET Siber Güvenlik Laboratuvarı - Gelişmiş RCE & EDR Analiz Rehberi
 
-Bu proje, Carbon Black ve diğer EDR çözümlerinin Windows IIS üzerindeki `w3wp.exe` (Worker Process) davranışlarını analiz etmek için tasarlanmıştır.
+Bu proje, SQL Injection ve Dosya Yükleme üzerinden Remote Code Execution (RCE) senaryolarını test etmek için geliştirilmiştir.
 
-## 1. Mimari Yapı (Senaryo)
-- **Sunucu A (Web Sunucusu):** IIS kurulu, Windows Server (veya Win 10/11), Carbon Black Agent yüklü.
-- **Sunucu B (Veritabanı Sunucusu):** MSSQL Server yüklü.
+## 1. SQL Injection Üzerinden Komut Çalıştırma (xp_cmdshell)
+MSSQL üzerinden komut çalıştırmak için şu adımları izleyin:
+1. **Hazırlık:** `init_db.sql` scriptini çalıştırarak `xp_cmdshell` özelliğini aktif edin.
+2. **Saldırı:** Arama kutusuna şu komutu girin:
+   `'; EXEC xp_cmdshell 'whoami'--`
+3. **Analiz:** Carbon Black üzerinde `sqlservr.exe` (MSSQL) süreci altından bir `cmd.exe` oluştuğunu görmelisiniz.
 
-## 2. Veritabanı Sunucusu (Sunucu B) Hazırlığı
-1. MSSQL Server'da "SQL Server Authentication" (SQL Kullanıcı Kimlik Doğrulaması) özelliğinin açık olduğunu teyit edin.
-2. `init_db.sql` scriptini çalıştırarak `ECommerceDB` veritabanını ve tablolarını oluşturun.
-3. SQL Server Configuration Manager üzerinden **TCP/IP** protokolünü etkinleştirin ve varsayılan 1433 portunun dışarıdan erişilebilir olduğundan emin olun.
-4. Windows Firewall üzerinden 1433 portuna izin verin.
+## 2. Insecure File Upload & Trigger (Web Shell / RCE)
+Dosya yükleyip sunucu tarafında tetiklemek için:
+1. **Yükleme:** Bir `.aspx` web shell veya bir `.exe` dosyası yükleyin.
+2. **Tetikleme:**
+   - **Tetikle (Process.Start):** Sunucu tarafında `Process.Start()` metoduyla dosyayı çalıştırır. (w3wp.exe -> child process)
+   - **Web Erişimi:** Dosyaya tarayıcı üzerinden direkt erişir. (`.aspx` web shell'ler için idealdir)
+3. **IIS İzni:** IIS Manager üzerinden `uploads` klasörüne sağ tıklayıp "Handler Mappings" kısmından `Execute` izni vermeniz gerekebilir.
 
-## 3. Web Sunucusu (Sunucu A) Hazırlığı & IIS Kurulumu
-1. **Kodun Derlenmesi:**
-   ```powershell
-   dotnet publish -c Release -o C:\inetpub\vulnerableshop
-   ```
-2. **IIS Yapılandırması:**
-   - Yeni bir Web Sitesi oluşturun. (Port: 80 veya 8080)
-   - Uygulama Havuzu (AppPool) ayarlarında **.NET CLR Version: No Managed Code** seçin.
-   - **Identity:** Application Pool Identity olarak bırakabilirsiniz ancak veritabanına erişim yetkisi olduğundan emin olun.
-3. **Yazma Yetkisi:** `wwwroot\uploads` klasörüne sağ tıklayıp Güvenlik sekmesinden `IIS AppPool\<SiteAdi>` kullanıcısına **Yazma** yetkisi verin.
-4. **Connection String:** `appsettings.json` içindeki sunucu adresini Sunucu B'nin IP adresiyle güncelleyin.
+## 3. IIS & Yazma Yetkileri
+- **Handler Mappings:** Yüklediğiniz `.aspx` dosyalarının çalışması için IIS üzerinde "ASP.NET" modülünün kurulu ve aktif olduğundan emin olun.
+- **Dizin İzinleri:** `wwwroot/uploads` dizinine `IIS AppPool\<SiteAdi>` kullanıcısı için "Full Control" veya en azından "Write/Execute" yetkisi verin.
 
-## 4. Carbon Black Analiz Senaryoları
-
-### Senaryo 1: Command Injection (RCE)
-- **Modül:** `/Home/Ping`
-- **Girdi:** `127.0.0.1 & whoami`
-- **Analiz:** Carbon Black panelinde `w3wp.exe` sürecinin altında bir child process olarak `cmd.exe` ve `whoami.exe`'nin oluştuğunu görmelisiniz. Bu, "Unusual Child Process" veya "Suspicious Command Execution" olarak alarm üretmelidir.
-
-### Senaryo 2: Insecure File Upload
-- **Modül:** `/Home/UploadProductImage`
-- **Girdi:** Bir .exe veya .aspx dosyası yükleyin.
-- **Analiz:** Dosya sisteme yazıldığında EDR'ın "File Write" event'ini nasıl yakaladığını görün. Eğer yüklediğiniz dosyayı IIS üzerinden tetiklerseniz, w3wp.exe'nin bu dosyayı çalıştırma girişimini izleyin.
-
-### Senaryo 3: SQL Injection
-- **Modül:** `/Home/Index` (Arama Kutusu)
-- **Girdi:** `' OR 1=1--`
-- **Analiz:** Uygulamanın MSSQL sunucusuyla kurduğu bağlantıda geçen ham SQL sorgularını ve sızan verileri izleyin.
-
-## 5. İpucu: w3wp.exe Davranış Kuralları
-Normalde bir web servisi sadece gelen HTTP isteklerini cevaplar. Eğer bu servis:
-- Bir shell (`cmd`, `powershell`) başlatıyorsa,
-- Sistem araçlarını (`net`, `tasklist`, `whoami`) çalıştırıyorsa,
-- Yerel diskte yürütülebilir dosyalar oluşturuyorsa,
-Bu durum doğrudan bir güvenlik ihlali (Exploitation) belirtisidir ve Carbon Black üzerinde bu davranışlar en yüksek öncelikle takip edilmelidir.
+## 4. Carbon Black Önemli Takip Noktaları
+- **Process Lineage:** `w3wp.exe` -> `cmd.exe` veya `sqlservr.exe` -> `cmd.exe` ağaçlarını takip edin.
+- **File Mod Events:** `w3wp.exe` tarafından `uploads` klasörüne yazılan dosyaları ve bu dosyaların sonraki süreçte çalıştırılma girişimlerini analiz edin.
