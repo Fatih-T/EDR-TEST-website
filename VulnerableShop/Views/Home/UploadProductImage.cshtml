@@ -1,26 +1,55 @@
 @{
-    ViewData["Title"] = "Ürün Resmi Yükle";
+    ViewData["Title"] = "Ürün Resmi Yükle & Tetikle";
 }
 
-<h2>Ürün Resmi Yükleme Paneli</h2>
+<div class="row">
+    <div class="col-md-6">
+        <div class="main-card">
+            <h2 class="section-title">Yeni Dosya Yükle</h2>
+            <form asp-action="UploadProductImage" method="post" enctype="multipart/form-data" class="mb-4">
+                <div class="mb-3">
+                    <input type="file" name="file" class="form-control" />
+                </div>
+                <button type="submit" class="btn btn-soft w-100">Yükle</button>
+            </form>
 
-<form method="post" enctype="multipart/form-data">
-    <div class="form-group">
-        <label for="file">Dosya Seç:</label>
-        <input type="file" class="form-control" name="file" id="file" />
+            @if (ViewBag.Message != null)
+            {
+                <div class="alert alert-success">@ViewBag.Message</div>
+            }
+            @if (ViewBag.Error != null)
+            {
+                <div class="alert alert-danger">@ViewBag.Error</div>
+            }
+        </div>
     </div>
-    <button type="submit" class="btn btn-success mt-2">Yükle</button>
-</form>
 
-<hr />
+    <div class="col-md-6">
+        <div class="main-card">
+            <h2 class="section-title">Yüklenen Dosyaları Tetikle (RCE)</h2>
+            <p class="text-muted mb-3">Yüklediğiniz dosyaların IIS (w3wp.exe) altında tetiklenmesini sağlayabilirsiniz.</p>
 
-@if (ViewBag.Message != null)
-{
-    <div class="alert alert-info">
-        @ViewBag.Message
+            <div class="list-group">
+                @if (ViewBag.UploadedFiles != null)
+                {
+                    @foreach (var file in ViewBag.UploadedFiles)
+                    {
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            @file
+                            <div class="btn-group">
+                                @* 1. Sunucu Tarafında Çalıştır (Process.Start) *@
+                                <a asp-action="TriggerFile" asp-route-fileName="@file" class="btn btn-sm btn-danger">🚀 Tetikle</a>
+                                @* 2. Web Shell / Web Erişimi *@
+                                <a href="/uploads/@file" target="_blank" class="btn btn-sm btn-outline-primary">🌐 Web Erişimi</a>
+                            </div>
+                        </div>
+                    }
+                }
+            </div>
+
+            <div class="alert alert-info mt-3" style="font-size: 0.85rem;">
+                <strong>İpucu:</strong> Eğer bir .aspx web shell yüklerseniz, "Web Erişimi" butonuna basarak tarayıcı üzerinden kontrol edebilirsiniz. Bu işlem <code>w3wp.exe</code> sürecini doğrudan tetikler.
+            </div>
+        </div>
     </div>
-}
-
-<div class="alert alert-danger mt-4">
-    <strong>Not:</strong> Bu modül üzerinde dosya uzantısı kontrolü yapılmamıştır. .aspx veya .exe gibi zararlı dosyalar yükleyerek w3wp.exe üzerinden Carbon Black tarafından nasıl algılanacağını test edebilirsiniz.
 </div>

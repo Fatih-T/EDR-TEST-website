@@ -1,31 +1,34 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - VulnerableShop</title>
+    <title>@ViewData["Title"] - VulnerableShop Lab</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">VulnerableShop</a>
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-5">
+            <div class="container">
+                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">
+                    <span style="font-size: 1.5rem; margin-right: 0.5rem;">🛡️</span>VulnerableShop Lab
+                </a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-end">
+                    <ul class="navbar-nav">
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Ürünler (SQLi & XSS)</a>
+                            <a class="nav-link px-3" asp-area="" asp-controller="Home" asp-action="Index">🛒 Ürün Kataloğu</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Ping">Ping (RCE)</a>
+                            <a class="nav-link px-3" asp-area="" asp-controller="Home" asp-action="Ping">⚡ Sistem Teşhis</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="UploadProductImage">Dosya Yükleme (Insecure Upload)</a>
+                            <a class="nav-link px-3" asp-area="" asp-controller="Home" asp-action="UploadProductImage">📤 Resim Yükle</a>
                         </li>
                     </ul>
                 </div>
@@ -38,9 +41,14 @@
         </main>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2024 - VulnerableShop - Siber Güvenlik Laboratuvarı
+    <footer class="footer">
+        <div class="container text-center">
+            <div class="mb-2">
+                <strong>VulnerableShop Siber Güvenlik Laboratuvarı</strong>
+            </div>
+            <div class="text-muted">
+                &copy; 2024 - Carbon Black & EDR Analiz Çalışması - 🛡️ Yerel Laboratuvar Ortamı
+            </div>
         </div>
     </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
