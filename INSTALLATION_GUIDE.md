@@ -47,3 +47,18 @@ Bu rehber, VulnerableShop uygulamasını iki ayrı sunucuda (IIS ve MSSQL) nası
 2. **Stored XSS:** Ürün detaylarına `<script>alert(1)</script>` içeren yorumlar ekleyerek kalıcı XSS saldırısını gözlemleyin.
 3. **RCE (via SQLi):** Arama kutusunda `xp_cmdshell` tetikleyerek `sqlservr.exe` altındaki süreçleri izleyin.
 4. **RCE (via File Upload):** Yüklenen dosyaları "Tetikle" butonu veya direkt web erişimi ile çalıştırarak `w3wp.exe` altındaki süreçleri izleyin.
+
+---
+
+## 5. Önemli: Dosya Yükleme (HTTP 500) Hatası Çözümü
+
+Eğer dosya yüklerken "HTTP 500" hatası alıyorsanız, bunun en yaygın sebebi IIS kullanıcısının klasöre yazma yetkisi olmamasıdır.
+
+**Çözüm Adımları:**
+1. Dosya gezgininde `C:\inetpub\vulnerableshop\wwwroot` klasörüne gidin.
+2. `uploads` klasörü yoksa manuel oluşturun.
+3. Klasöre sağ tıklayın -> **Properties** -> **Security** sekmesi.
+4. **Edit** -> **Add** butonuna basın.
+5. Kutuya `IIS AppPool\<SitenizinAdi>` (Örn: `IIS AppPool\VulnerableShop`) yazın ve **Check Names** diyerek ekleyin.
+6. Bu kullanıcıya **"Modify"** (Değiştirme) ve **"Write"** (Yazma) yetkisi verin.
+7. Uygulamanın `appsettings.json` dosyasındaki bağlantı dizesinin (Connection String) de MSSQL tarafında yetkili bir kullanıcıya (`sa` gibi) sahip olduğundan emin olun.

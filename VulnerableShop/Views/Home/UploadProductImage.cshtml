@@ -13,13 +13,17 @@
                 <button type="submit" class="btn btn-soft w-100">Yükle</button>
             </form>
 
-            @if (ViewBag.Message != null)
+            @if (TempData["Message"] != null)
             {
-                <div class="alert alert-success">@ViewBag.Message</div>
+                <div class="alert alert-success">@TempData["Message"]</div>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger" style="font-size: 0.9rem;">@TempData["Error"]</div>
             }
             @if (ViewBag.Error != null)
             {
-                <div class="alert alert-danger">@ViewBag.Error</div>
+                <div class="alert alert-warning">@ViewBag.Error</div>
             }
         </div>
     </div>
@@ -32,23 +36,25 @@
             <div class="list-group">
                 @if (ViewBag.UploadedFiles != null)
                 {
-                    @foreach (var file in ViewBag.UploadedFiles)
+                    @foreach (var file in (List<string>)ViewBag.UploadedFiles)
                     {
                         <div class="list-group-item d-flex justify-content-between align-items-center">
                             @file
                             <div class="btn-group">
-                                @* 1. Sunucu Tarafında Çalıştır (Process.Start) *@
                                 <a asp-action="TriggerFile" asp-route-fileName="@file" class="btn btn-sm btn-danger">🚀 Tetikle</a>
-                                @* 2. Web Shell / Web Erişimi *@
                                 <a href="/uploads/@file" target="_blank" class="btn btn-sm btn-outline-primary">🌐 Web Erişimi</a>
                             </div>
                         </div>
                     }
                 }
+                else
+                {
+                    <p class="text-muted">Henüz dosya yüklenmemiş veya dizin boş.</p>
+                }
             </div>
 
             <div class="alert alert-info mt-3" style="font-size: 0.85rem;">
-                <strong>İpucu:</strong> Eğer bir .aspx web shell yüklerseniz, "Web Erişimi" butonuna basarak tarayıcı üzerinden kontrol edebilirsiniz. Bu işlem <code>w3wp.exe</code> sürecini doğrudan tetikler.
+                <strong>İpucu:</strong> Eğer 500 hatası alıyorsanız, IIS üzerinde <code>C:\inetpub\vulnerableshop\wwwroot\uploads</code> klasörüne <code>IIS AppPool\<SiteAdi></code> kullanıcısı için <strong>Yazma (Write)</strong> yetkisi verdiğinizden emin olun.
             </div>
         </div>
     </div>
